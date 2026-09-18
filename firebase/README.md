@@ -188,10 +188,24 @@ GoDaddy → *My Products* → the domain → **DNS** → *Add record*. GoDaddy w
 
 | Type | Name | Value | Note |
 |---|---|---|---|
-| TXT | `@` | the `google-site-verification=…` string Firebase gives you | verification only, keep it |
-| A | `@` | `199.36.158.100` | Firebase Hosting |
-| A | `@` | `199.36.153.5` | second Firebase A record, add both |
+| TXT | `@` | `hosting-site=jvoice-b4b2e` | ownership proof, keep it |
+| A | `@` | `199.36.158.100` | Firebase Hosting - the **only** A record |
+| TXT | `_acme-challenge` | the token Firebase shows under the certificate step | lets the TLS cert issue over DNS |
 | CNAME | `www` | `jvoice-b4b2e.web.app` | only if you did not let Firebase own `www` |
+
+**One A record, not two.** Firebase's older flow gave two (`199.36.153.5` and
+`199.36.158.100`); this site was claimed under the current flow, which wants
+`199.36.158.100` alone and reports `HOST_CONFLICT` if `199.36.153.5` is present.
+The symptom is the browser's "Not secure" warning: Firebase's certificate
+challenge fails against the wrong IP, no certificate is issued, and the site
+falls back to the generic `firebaseapp.com` one. The exact records Firebase
+wants right now can be read with:
+
+```bash
+curl -H "Authorization: Bearer $(gcloud auth print-access-token)"      -H "x-goog-user-project: jvoice-b4b2e"      https://firebasehosting.googleapis.com/v1beta1/projects/jvoice-b4b2e/sites/jvoice-b4b2e/customDomains
+```
+
+`hostState` should read `HOST_ACTIVE` and `cert.state` `CERT_ACTIVE` once done.
 
 Two traps specific to GoDaddy:
 
