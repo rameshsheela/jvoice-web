@@ -1,3 +1,4 @@
+import { L } from '../i18n/localized.js'
 import { useNavigate } from 'react-router-dom'
 import { useAuth, useSelectors, useStore } from '../store/store.jsx'
 import { Bar, Empty, Pill, SectionHead, Stat, StatusPill, relativeTime } from '../components/ui.jsx'
@@ -182,7 +183,7 @@ export function EditorDashboard() {
           render={(a) => (
             <>
               <td>
-                <div className="cell-title">{a.headline}</div>
+                <div className="cell-title">{L(a.headline)}</div>
                 <div className="cell-sub">
                   {s.categoryName(a.categoryId)} · {s.userName(a.reporterId)} ·{' '}
                   {relativeTime(a.createdAt)}
@@ -392,7 +393,7 @@ export function CreatorDashboard() {
                       onClick={() => nav('/study/topic/' + t.id)}
                     >
                       <td>
-                        <div className="cell-title">{t.nameEn}</div>
+                        <div className="cell-title">{L(t.name)}</div>
                         <div className="cell-sub">
                           {s.subjectEmoji(t.subjectId)} {s.subjectName(t.subjectId)} · {t.difficulty}
                         </div>
@@ -496,7 +497,7 @@ export function ReporterDashboard() {
           render={(a) => (
             <>
               <td>
-                <div className="cell-title">{a.headline}</div>
+                <div className="cell-title">{L(a.headline)}</div>
                 <div className="cell-sub">{a.rejectionReason || a.editorNote || 'Open to read the note'}</div>
               </td>
               <td><StatusPill status={a.status} /></td>
@@ -512,7 +513,7 @@ export function ReporterDashboard() {
           render={(a) => (
             <>
               <td>
-                <div className="cell-title">{a.headline}</div>
+                <div className="cell-title">{L(a.headline)}</div>
                 <div className="cell-sub">{s.categoryName(a.categoryId)} · {relativeTime(a.createdAt)}</div>
               </td>
               <td><StatusPill status={a.status} /></td>

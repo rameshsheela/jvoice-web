@@ -18,8 +18,10 @@ import {
   collection as fsCollection,
   deleteDoc,
   doc,
+  getDocs,
   onSnapshot,
-  setDoc
+  setDoc,
+  writeBatch
 } from 'firebase/firestore'
 import { getFirebaseStore, isFirebaseReady } from '../firebase.js'
 import { toLt, toLtList, trimLt } from '../i18n/localized.js'
@@ -38,6 +40,25 @@ export const COLLECTIONS = {
 }
 
 /* ================================================================= codecs */
+
+/**
+ * Article status, both ways. Firestore (and the app) store the enum name;
+ * the console was written against the display label and compares against
+ * NEWS_STATUS everywhere, so the translation lives here, at the boundary,
+ * rather than in forty comparisons.
+ */
+const STATUS_FROM_DB = {
+  DRAFT: 'Draft',
+  SUBMITTED: 'Submitted',
+  UNDER_REVIEW: 'Under Review',
+  APPROVED: 'Approved',
+  REJECTED: 'Rejected',
+  SENT_BACK: 'Sent Back',
+  PUBLISHED: 'Published'
+}
+const STATUS_TO_DB = Object.fromEntries(Object.entries(STATUS_FROM_DB).map(([k, v]) => [v, k]))
+const statusFromDb = (v) => STATUS_FROM_DB[v] ?? (Object.values(STATUS_FROM_DB).includes(v) ? v : 'Draft')
+const statusToDb = (v) => STATUS_TO_DB[v] ?? (STATUS_FROM_DB[v] ? v : 'DRAFT')
 
 const ltOut = (v) => {
   const t = trimLt(v)
@@ -73,7 +94,7 @@ export const CODECS = {
       isBreaking: Boolean(d.isBreaking),
       isFeatured: Boolean(d.isFeatured),
       isTrending: Boolean(d.isTrending),
-      status: d.status ?? 'DRAFT',
+      status: statusFromDb(d.status),
       reporterId: d.reporterId ?? '',
       reporterName: d.reporterName ?? '',
       // Carried through untouched. The app renders it on the byline, and dropping
@@ -85,7 +106,14 @@ export const CODECS = {
       rejectionReason: d.rejectionReason ? toLt(d.rejectionReason) : null,
       editorNote: d.editorNote ? toLt(d.editorNote) : null,
       views: d.views ?? 0,
-      reportCount: d.reportCount ?? 0
+      reportCount: d.reportCount ?? 0,
+      likes: d.likes ?? 0,
+      dislikes: d.dislikes ?? 0,
+      comments: d.comments ?? 0,
+      detailEnabled: d.detailEnabled !== false,
+      // Whether readers get a notification when this story goes live. Chosen
+      // at creation time; older stories without the field behave as before.
+      notifyReaders: d.notifyReaders !== false
     }),
     to: (a) => ({
       headline: ltOut(a.headline),
@@ -100,7 +128,7 @@ export const CODECS = {
       isBreaking: Boolean(a.isBreaking),
       isFeatured: Boolean(a.isFeatured),
       isTrending: Boolean(a.isTrending),
-      status: a.status ?? 'DRAFT',
+      status: statusToDb(a.status),
       reporterId: a.reporterId ?? '',
       reporterName: a.reporterName ?? '',
       reporterAvatarUrl: a.reporterAvatarUrl ?? '',
@@ -111,6 +139,11 @@ export const CODECS = {
       editorNote: a.editorNote ? ltOut(a.editorNote) : null,
       views: a.views ?? 0,
       reportCount: a.reportCount ?? 0,
+      likes: a.likes ?? 0,
+      dislikes: a.dislikes ?? 0,
+      comments: a.comments ?? 0,
+      detailEnabled: a.detailEnabled !== false,
+      notifyReaders: a.notifyReaders !== false,
       // Denormalised sort key, matching NewsCodec.kt — publishedAt is null until
       // publication, and Firestore cannot order on a field some documents lack.
       sortAt: a.publishedAt ?? a.createdAt ?? Date.now()
@@ -290,6 +323,48 @@ export const CODECS = {
   }
 }
 
+/* ============================================================ notifications */
+
+/**
+ * A fresh Firestore id for a new document in `name` - so two consoles (or
+ * one reloaded) can never mint the same id and overwrite each other's story,
+ * which a page-local counter did.
+ */
+export function newDocId(name) {
+  const db = getFirebaseStore()
+  return db ? doc(fsCollection(db, name)).id : `local_${Date.now()}`
+}
+
+/**
+ * Tells readers a story is live. Written to `newsNotifications` in the shape
+ * the app decodes (NewsCodec.kt): bilingual title and message, a type, and
+ * no targetRole - which is what makes it a broadcast the app may read.
+ *
+ * Honours the story's "Send notification" switch: a story filed with
+ * `notifyReaders` off goes live silently. Returns whether one was sent.
+ */
+export function notifyPublished(article) {
+  const db = getFirebaseStore()
+  if (!db || !article || article.notifyReaders === false) return false
+  const headline = toLt(article.headline)
+  const breaking = Boolean(article.isBreaking)
+  const data = {
+    title: breaking
+      ? { en: 'Breaking news', te: 'బ్రేకింగ్ న్యూస్' }
+      : { en: 'New story', te: 'కొత్త వార్త' },
+    message: { en: headline.en || headline.te, te: headline.te || headline.en },
+    timeMillis: Date.now(),
+    type: breaking ? 'BREAKING' : 'GENERAL',
+    isRead: false,
+    articleId: article.id,
+    targetRole: null
+  }
+  setDoc(doc(fsCollection(db, 'newsNotifications')), data).catch((e) =>
+    console.error('[notify] write failed:', e.message)
+  )
+  return true
+}
+
 /* =================================================================== sync */
 
 /**
@@ -366,10 +441,34 @@ export function syncCollection(stateKey, previous, next, baseline) {
   for (const id of prevById.keys()) {
     if (nextById.has(id)) continue
     baseline.delete(id)
-    deleteDoc(doc(db, name, id)).catch((e) =>
+    deleteWithChildren(db, name, id).catch((e) =>
       console.error(`[sync] delete ${name}/${id} failed:`, e.message)
     )
   }
+}
+
+/** What each collection keeps nested under its documents. */
+const CHILD_COLLECTIONS = {
+  articles: ['comments', 'reports'],
+}
+
+/**
+ * Deletes a document and the subcollections listed for its collection.
+ * Firestore does not cascade on its own - deleting `articles/x` would leave
+ * every comment and report under it orphaned. Children go first, in batches,
+ * and the document last, so a failure part-way leaves the story to retry.
+ */
+async function deleteWithChildren(db, name, id) {
+  const ref = doc(db, name, id)
+  for (const child of CHILD_COLLECTIONS[name] ?? []) {
+    const snap = await getDocs(fsCollection(ref, child))
+    for (let i = 0; i < snap.docs.length; i += 450) {
+      const batch = writeBatch(db)
+      snap.docs.slice(i, i + 450).forEach((d) => batch.delete(d.ref))
+      await batch.commit()
+    }
+  }
+  await deleteDoc(ref)
 }
 
 /** Records a server snapshot as the baseline, so hydration is never written back. */

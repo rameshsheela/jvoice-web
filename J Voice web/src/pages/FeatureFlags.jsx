@@ -2,7 +2,7 @@
  * The app-level feature flags screen.
  *
  * Distinct from Settings, which holds console-side presentation choices. These
- * four switches reach into the running Android app: flipping one here changes what
+ * switches reach into the running Android app: flipping one here changes what
  * every reader sees within a second or so, with no release. That is worth its own
  * page and its own warning rather than another block of toggles on Settings.
  */
@@ -82,7 +82,7 @@ export default function FeatureFlags() {
                 <div className="cell-title">{def.label}</div>
                 <div className="cell-sub">{def.desc}</div>
                 <div className="cell-sub" style={{ opacity: 0.6, fontFamily: 'monospace' }}>
-                  {def.key}
+                  {def.key} · {def.optIn ? 'off until switched on' : 'on until switched off'}
                 </div>
               </div>
               <Switch
@@ -98,8 +98,11 @@ export default function FeatureFlags() {
       <div className="card card-pad">
         <ul className="plain" style={{ color: 'var(--muted)', fontSize: 13.5, lineHeight: 1.7 }}>
           <li>
-            A flag that has never been saved counts as <strong>on</strong>. The app fails
-            towards showing things, so a network problem cannot blank its toolbar.
+            Each flag has a shipped default, shown under its name. A flag that is
+            <strong> on until switched off</strong> stays on if the app cannot reach the server,
+            so a network problem never blanks the toolbar; one that is
+            <strong> off until switched on</strong> stays hidden the same way, so nothing
+            unreleased leaks.
           </li>
           <li>
             Changes reach open apps live — the app holds a listener on this node rather than

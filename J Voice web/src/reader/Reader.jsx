@@ -1,7 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
-import { Link, Navigate, Outlet, useNavigate, useParams } from 'react-router-dom'
+import { Link, Navigate, Outlet, useParams } from 'react-router-dom'
 import { JVoiceMark } from '../components/Logo.jsx'
-import { DemoPersonas, StaffSignInForm } from '../components/StaffSignIn.jsx'
 import { L, ltList } from '../i18n/localized.js'
 import { useAuth } from '../store/store.jsx'
 import { relativeTime } from '../components/ui.jsx'
@@ -97,9 +96,9 @@ export function ReaderShell() {
                 Open console
               </Link>
             ) : (
-              <a className="rd-signin" href="#staff-signin">
-                Staff sign in
-              </a>
+              <Link className="rd-signin" to="/login">
+                Login
+              </Link>
             )}
           </header>
 
@@ -111,12 +110,66 @@ export function ReaderShell() {
                 <strong>J Voice</strong> — Telugu news and competitive-exam preparation.
               </div>
               <span className="rd-spacer" />
+              <Link to="/contact">Contact us</Link>
+              <Link to="/privacy-policy">Privacy policy</Link>
               <Link to="/login">Staff &amp; admin console</Link>
             </div>
           </footer>
         </div>
       </FeedContext.Provider>
     </LangContext.Provider>
+  )
+}
+
+/* -------------------------------------------------------------------- video */
+
+/**
+ * The video id from any of YouTube's link shapes, or null for a non-YouTube
+ * link - a direct file, typically a Firebase Storage download URL.
+ */
+function youtubeVideoId(url) {
+  let u
+  try {
+    u = new URL(url.trim())
+  } catch {
+    return null
+  }
+  const host = u.hostname.toLowerCase().replace(/^(www|m)\./, '')
+  const parts = u.pathname.split('/').filter(Boolean)
+  let id = null
+  if (host === 'youtu.be') id = parts[0]
+  else if (host === 'youtube.com' || host === 'youtube-nocookie.com') {
+    if (parts[0] === 'watch') id = u.searchParams.get('v')
+    else if (['shorts', 'embed', 'live', 'v'].includes(parts[0])) id = parts[1]
+  }
+  return id && /^[A-Za-z0-9_-]{6,}$/.test(id) ? id : null
+}
+
+/**
+ * A story video. A YouTube link is shown as YouTube's thumbnail that opens
+ * the video on YouTube - embeds are unreliable (region, ads, "unavailable")
+ * and the app does the same, so readers get one behaviour everywhere. A file
+ * URL (Firebase Storage) plays in the browser's own player.
+ */
+function ArticleVideo({ url }) {
+  const id = youtubeVideoId(url)
+  if (id) {
+    return (
+      <a
+        className="rd-video rd-video-yt"
+        href={`https://www.youtube.com/watch?v=${id}`}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <img src={`https://img.youtube.com/vi/${id}/hqdefault.jpg`} alt="Watch on YouTube" />
+        <span className="rd-video-badge">▶ Watch on YouTube</span>
+      </a>
+    )
+  }
+  return (
+    <div className="rd-video">
+      <video src={url} controls preload="metadata" playsInline />
+    </div>
   )
 }
 
@@ -180,183 +233,6 @@ function ArticleCard({ article, categoryName, featured }) {
         </div>
       </div>
     </Link>
-  )
-}
-
-/* ------------------------------------------------------------------ landing */
-
-export function ReaderHome() {
-  const feed = useFeed()
-  const { lang } = useLang()
-  const { session } = useAuth()
-  const navigate = useNavigate()
-  const [categoryId, setCategoryId] = useState('all')
-
-  // Signing in from the landing page means "take me to work", so go straight to
-  // the console rather than leaving the reader open behind a changed banner.
-  const toConsole = () => navigate('/console')
-
-  const categories = useMemo(
-    () => feed.categories.filter((c) => c.isEnabled !== false),
-    [feed.categories]
-  )
-  const categoryName = (id) => L(categories.find((c) => c.id === id)?.name, lang) || 'General'
-
-  const sorted = useMemo(() => [...feed.articles].sort(byNewest), [feed.articles])
-  const shown = categoryId === 'all' ? sorted : sorted.filter((a) => a.categoryId === categoryId)
-
-  const breaking = sorted.filter((a) => a.isBreaking).slice(0, 4)
-  // The lead is the newest featured story, and the plain newest when nothing is
-  // featured — a landing page with an empty hero would be worse than either.
-  const lead = shown.find((a) => a.isFeatured) ?? shown[0] ?? null
-  const rest = lead ? shown.filter((a) => a.id !== lead.id) : shown
-
-  return (
-    <main className="rd-main">
-      {breaking.length ? (
-        <div className="rd-breaking">
-          <span className="rd-breaking-tag">Breaking</span>
-          <div className="rd-breaking-list">
-            {breaking.map((a) => (
-              <Link key={a.id} to={`/read/${a.id}`}>
-                {L(a.headline, lang)}
-              </Link>
-            ))}
-          </div>
-        </div>
-      ) : null}
-
-      <section className="rd-section">
-        <div className="rd-chips">
-          <button
-            className={categoryId === 'all' ? 'rd-chip on' : 'rd-chip'}
-            onClick={() => setCategoryId('all')}
-          >
-            All news
-          </button>
-          {categories.map((c) => (
-            <button
-              key={c.id}
-              className={categoryId === c.id ? 'rd-chip on' : 'rd-chip'}
-              onClick={() => setCategoryId(c.id)}
-            >
-              <span>{c.emoji}</span> {L(c.name, lang)}
-            </button>
-          ))}
-        </div>
-
-        {feed.status === 'loading' ? (
-          <div className="rd-note">Loading the latest from J Voice…</div>
-        ) : feed.status === 'off' ? (
-          <div className="rd-note">
-            This build has no Firebase configuration, so there is nothing to read.
-          </div>
-        ) : !shown.length ? (
-          <div className="rd-note">
-            No published stories in this section yet. Editors publish from the console.
-          </div>
-        ) : (
-          <>
-            {lead ? <ArticleCard article={lead} categoryName={categoryName} featured /> : null}
-            <div className="rd-grid">
-              {rest.map((a) => (
-                <ArticleCard key={a.id} article={a} categoryName={categoryName} />
-              ))}
-            </div>
-          </>
-        )}
-      </section>
-
-      <StudyStrip />
-
-      <section className="rd-signin-band" id="staff-signin">
-        <div className="rd-signin-in">
-          <div className="rd-signin-copy">
-            <h2>Working at J Voice?</h2>
-            <p>
-              Reporters, editors, content creators and admins sign in here. The console is where
-              stories are filed, reviewed and published, and where the study syllabus, question bank
-              and exams are built — everything above is what readers see once it goes live.
-            </p>
-            {session ? (
-              <Link className="rd-cta" to="/console">
-                You are signed in as {session.name} — open the console
-              </Link>
-            ) : null}
-          </div>
-
-          <div className="rd-signin-form">
-            {session ? null : <StaffSignInForm onSignedIn={toConsole} />}
-          </div>
-        </div>
-
-        {session ? null : (
-          <div className="rd-signin-demo">
-            <div className="demo-divider">
-              <span>or explore the console with a demo persona — no account needed</span>
-            </div>
-            <DemoPersonas compact onSignedIn={toConsole} />
-          </div>
-        )}
-      </section>
-    </main>
-  )
-}
-
-/** Subjects and exam tracks, both public by rule — the study side, at a glance. */
-function StudyStrip() {
-  const feed = useFeed()
-  const { lang } = useLang()
-  if (!feed.subjects.length && !feed.tracks.length) return null
-
-  const subjects = feed.subjects.filter((s) => s.isEnabled !== false)
-  const tracks = feed.tracks.filter((t) => t.isEnabled !== false)
-  const topicCount = (subjectId) => feed.topics.filter((t) => t.subjectId === subjectId).length
-  const materialCount = (subjectId) =>
-    feed.studyArticles.filter((a) => a.subjectId === subjectId).length
-
-  return (
-    <section className="rd-section rd-study">
-      <h2>Study &amp; exams</h2>
-      <p className="rd-study-sub">
-        Free syllabus, notes and practice for Telangana and Andhra Pradesh competitive exams — read
-        them in full in the J Voice app.
-      </p>
-
-      {tracks.length ? (
-        <div className="rd-tracks">
-          {tracks.map((t) => (
-            <div className="rd-track" key={t.id}>
-              <div className="rd-track-top">
-                <span className="rd-track-emoji">{t.emoji}</span>
-                <strong>{t.shortName || L(t.name, lang)}</strong>
-              </div>
-              <div className="rd-track-name">{L(t.name, lang)}</div>
-              <div className="rd-track-meta">
-                {t.totalQuestions ? <span>{t.totalQuestions} questions</span> : null}
-                {t.durationMinutes ? <span>· {t.durationMinutes} min</span> : null}
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : null}
-
-      {subjects.length ? (
-        <div className="rd-subjects">
-          {subjects.map((s) => (
-            <div className="rd-subject" key={s.id}>
-              <span className="rd-subject-emoji">{s.emoji}</span>
-              <div>
-                <div className="rd-subject-name">{L(s.name, lang)}</div>
-                <div className="rd-subject-meta">
-                  {topicCount(s.id)} topics · {materialCount(s.id)} notes
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : null}
-    </section>
   )
 }
 
@@ -433,6 +309,14 @@ export function ReaderArticle() {
             <p className="rd-note">This story has no body in the selected language yet.</p>
           )}
         </div>
+
+        {article.videoUrls?.length ? (
+          <div className="rd-videos">
+            {article.videoUrls.filter(Boolean).map((url) => (
+              <ArticleVideo key={url} url={url} />
+            ))}
+          </div>
+        ) : null}
 
         {article.photoUrls?.length ? (
           <div className="rd-photos">

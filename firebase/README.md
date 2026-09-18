@@ -216,6 +216,28 @@ rejects a sign-in from any origin not on its allow-list.
 `authDomain` in `J Voice web/src/firebase.js` stays `jvoice-b4b2e.firebaseapp.com`
 — that is the auth handler's own host and is unrelated to where the site is served.
 
+## Push notifications
+
+The desk's **Send notification to readers** switch (New article / Review story
+in the console) decides whether publishing a story writes a `newsNotifications`
+document. That document is two things at once:
+
+1. the entry in the app's Notifications tab, which it always was;
+2. the trigger for `pushNewsNotification` in `functions/index.js`, which relays
+   it to the FCM topic `news` as a data-only message. Every reader device
+   subscribes to that topic on launch (`core/push/NewsPush.kt`), draws the
+   alert in the reader's own language, and opens the story on tap.
+
+Cloud Functions need the **Blaze** plan (the project is on it; the function is deployed in `asia-south1`). To redeploy after a change:
+
+```bash
+cd firebase/functions && npm install
+cd ../.. && firebase deploy --only functions --project jvoice-b4b2e
+```
+
+If the function is ever down the switch still works - readers just see the
+story in the Notifications tab rather than the status bar.
+
 ## Commands
 
 ```bash

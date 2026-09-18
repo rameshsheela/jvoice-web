@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { LOGIN_DOMAIN } from '../firebase.js'
-import { LOGINS, useAuth } from '../store/store.jsx'
-import { Pill } from './ui.jsx'
+import { useAuth } from '../store/store.jsx'
 
 /**
  * The staff sign-in form.
@@ -84,74 +83,5 @@ export function StaffSignInForm({ onSignedIn }) {
 
       {!firebaseReady ? <div className="signin-error">Firebase is not configured in this build.</div> : null}
     </form>
-  )
-}
-
-const BADGE = {
-  Admin: { icon: '🛡️', scope: 'Full access', tone: 'ok' },
-  Editor: { icon: '🖊️', scope: 'News desk', tone: 'info' },
-  'Content Creator': { icon: '✍️', scope: 'Study authoring', tone: 'muted' },
-  Reporter: { icon: '🎙️', scope: 'Field reporting', tone: 'muted' }
-}
-
-/** A persona with no badge would crash the card on a destructure, so unknown
- *  roles fall back rather than take the login page down with them. */
-const FALLBACK_BADGE = { icon: '👤', scope: 'Console', tone: 'muted' }
-
-/** The demo persona cards. `compact` drops the access list, for the landing page. */
-export function DemoPersonas({ compact = false, onSignedIn }) {
-  const { signIn } = useAuth()
-  return (
-    <div className={compact ? 'grid grid-3' : 'grid grid-2'}>
-      {LOGINS.map((login) => {
-        const { icon, scope, tone } = BADGE[login.role] || FALLBACK_BADGE
-        return (
-          <div className="card login-card" key={login.role}>
-            <div className="btn-row" style={{ alignItems: 'center', marginBottom: 4 }}>
-              <h3 style={{ margin: 0 }}>
-                {icon} {login.role}
-              </h3>
-              <span style={{ flex: 1 }} />
-              <Pill tone={tone}>{scope}</Pill>
-            </div>
-
-            <p>{login.blurb}</p>
-
-            {compact ? null : (
-              <>
-                <div className="cell-sub" style={{ margin: '10px 0 4px' }}>
-                  {login.role === 'Admin' ? 'Can do everything' : 'What they can do'}
-                </div>
-                <ul className="access-list">
-                  {login.access.map((line) => (
-                    <li key={line}>{line}</li>
-                  ))}
-                </ul>
-
-                <div className="kv" style={{ marginTop: 10 }}>
-                  <span className="k">Signs in as</span>
-                  <span className="v">{login.name}</span>
-                </div>
-                <div className="kv">
-                  <span className="k">Email</span>
-                  <span className="v">{login.email}</span>
-                </div>
-              </>
-            )}
-
-            <button
-              className="primary"
-              style={{ marginTop: 14, width: '100%' }}
-              onClick={() => {
-                signIn(login.role)
-                onSignedIn?.()
-              }}
-            >
-              Continue as {login.role}
-            </button>
-          </div>
-        )
-      })}
-    </div>
   )
 }

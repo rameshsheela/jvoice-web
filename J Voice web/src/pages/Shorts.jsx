@@ -1,3 +1,4 @@
+import { L } from '../i18n/localized.js'
 import { useState } from 'react'
 import { useSelectors, useStore, useToast } from '../store/store.jsx'
 import {
@@ -84,7 +85,7 @@ export default function AiShorts() {
                     </div>
                   </td>
                   <td style={{ maxWidth: 220 }}>
-                    <div className="cell-sub">{s.articleById(sh.newsId)?.headline || 'Story removed'}</div>
+                    <div className="cell-sub">{L(s.articleById(sh.newsId)?.headline) || 'Story removed'}</div>
                   </td>
                   <td>
                     <div className="cell-title">{templateName(sh.templateId)}</div>
@@ -108,8 +109,8 @@ export default function AiShorts() {
                               payload: {
                                 id: sh.id,
                                 title: sh.title,
-                                headline: article?.headline || sh.title,
-                                description: article?.description
+                                headline: L(article?.headline) || sh.title,
+                                description: L(article?.shortDescription)
                               }
                             })
                             notify('Script generated')
@@ -210,7 +211,7 @@ export default function AiShorts() {
           onCreate={(article) => {
             dispatch({
               type: 'short/create',
-              payload: { newsId: article.id, title: article.headline, by: 'Ravi Teja Sharma' }
+              payload: { newsId: article.id, title: L(article.headline), by: 'Ravi Teja Sharma' }
             })
             setCreating(false)
             notify('Draft short created')
@@ -257,7 +258,7 @@ function NewShortDialog({ onClose, onCreate }) {
             {published.map((a) => (
               <tr key={a.id}>
                 <td>
-                  <div className="cell-title">{a.headline}</div>
+                  <div className="cell-title">{L(a.headline)}</div>
                   <div className="cell-sub">{s.categoryName(a.categoryId)} · {relativeTime(a.createdAt)}</div>
                 </td>
                 <td className="actions">

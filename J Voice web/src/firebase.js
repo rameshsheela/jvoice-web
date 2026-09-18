@@ -79,9 +79,18 @@ function init() {
 init()
 
 export const isFirebaseReady = () => Boolean(auth && db && store)
+/** The initialised app, for services set up on demand (Storage). */
+export const getFirebaseApp = () => app
 export const firebaseInitError = () => initError
 export const getFirebaseAuth = () => auth
 /** Realtime Database — accounts, session signals, feature flags. */
 export const getFirebaseDb = () => db
 /** Firestore — news, study material, the question bank, exams. */
 export const getFirebaseStore = () => store
+
+/**
+ * Browser key for Google Cloud Translation, used by the console's story forms
+ * (see i18n/translate.js). Restricted in Google Cloud to that one API and to
+ * the console's domains; it is not a secret and grants nothing else.
+ */
+export const TRANSLATE_KEY = 'AIzaSyC_RpCeKYHA7W3_xdDewtX-C9tUbqLUIeQ'

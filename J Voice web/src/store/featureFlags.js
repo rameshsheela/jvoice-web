@@ -25,37 +25,49 @@ const NODE = 'flags'
  */
 export const FLAG_DEFS = [
   {
-    key: 'newsLocationDropdown',
-    label: 'Location picker',
-    desc: 'The city dropdown beside the J Voice logo in the news toolbar'
-  },
-  {
     key: 'locationChips',
     label: 'Category chips',
-    desc: 'The scrolling filter chips under the toolbar in the swipe feed'
+    desc: 'The scrolling category filter row under the toolbar in the swipe feed.',
+    optIn: false
+  },
+  {
+    key: 'newsLocationDropdown',
+    label: 'Location picker in the toolbar',
+    desc: 'The city dropdown beside the J Voice logo. Readers can always change their location from Profile.',
+    optIn: true
   },
   {
     key: 'shortsTab',
-    label: 'Clips flow',
-    desc: 'Short-video clips: the reader bottom-bar tab and the screen behind it. ' +
-      'Turning this off also redirects anyone currently on the Clips screen.'
+    label: 'Clips tab',
+    desc: 'Short-video clips: the bottom-bar tab and the screen behind it. ' +
+      'Turning this off also redirects anyone currently on the Clips screen.',
+    optIn: true
   },
   {
-    key: 'moduleIcon',
-    label: 'Feed switch icon',
-    desc: 'The toolbar icon left of search that swaps between the swipe and classic feeds'
+    key: 'studyTab',
+    label: 'Study tab',
+    desc: 'The exam-preparation module in the reader bottom bar. With Clips and Study both off, the bar is hidden and the feed is the whole screen.',
+    optIn: true
+  },
+  {
+    key: 'staffLogin',
+    label: 'Staff sign-in on Profile',
+    desc: 'The "Staff sign in" button at the foot of the reader Profile screen, which opens the desk login inside the app.',
+    optIn: true
   }
 ]
 
 /**
- * A missing flag means ON.
+ * What a missing flag means, per flag.
  *
- * Matches `FeatureFlags.interpret` in the app, and matters here because the node
- * starts out empty: every switch must read as on before anybody has ever saved
- * one, or the console would claim the app is stripped bare when it is not.
+ * Matches the app: a flag that ships ON (`FeatureFlags.flagEnabled`) reads as
+ * on until someone writes false, so a network problem cannot blank the app; a
+ * flag that ships OFF (`flagOptedIn`) reads as off until someone writes true,
+ * so a network problem cannot reveal something unreleased. `optIn` on the
+ * definition says which kind each is.
  */
-export function interpret(value) {
-  if (value === undefined || value === null) return true
+export function interpret(value, def) {
+  if (value === undefined || value === null) return !(def?.optIn)
   if (typeof value === 'boolean') return value
   if (typeof value === 'number') return value !== 0
   if (typeof value === 'string') {
@@ -69,7 +81,7 @@ export function interpret(value) {
 export function normalise(raw) {
   const source = raw ?? {}
   const out = {}
-  for (const def of FLAG_DEFS) out[def.key] = interpret(source[def.key])
+  for (const def of FLAG_DEFS) out[def.key] = interpret(source[def.key], def)
   return out
 }
 
@@ -113,7 +125,7 @@ export async function seedMissingFlags() {
   const current = snap.val() ?? {}
   const writes = FLAG_DEFS
     .filter((def) => current[def.key] === undefined)
-    .map((def) => set(ref(getFirebaseDb(), `${NODE}/${def.key}`), true))
+    .map((def) => set(ref(getFirebaseDb(), `${NODE}/${def.key}`), !def.optIn))
   await Promise.all(writes)
   return writes.length
 }

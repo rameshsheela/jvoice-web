@@ -1,3 +1,5 @@
+import { newDocId } from '../store/firestoreData.js'
+import { L, ltList } from '../i18n/localized.js'
 import { useState } from 'react'
 import { useSelectors, useStore, useToast } from '../store/store.jsx'
 import { Empty, Modal, SectionHead, StatusPill, relativeTime } from '../components/ui.jsx'
@@ -76,8 +78,8 @@ export default function MyStories() {
               {mine.map((a) => (
                 <tr key={a.id} style={{ cursor: 'pointer' }} onClick={() => setView(a)}>
                   <td>
-                    <div className="cell-title">{a.headline}</div>
-                    <div className="cell-sub">{a.description || '—'}</div>
+                    <div className="cell-title">{L(a.headline)}</div>
+                    <div className="cell-sub">{L(a.shortDescription) || '—'}</div>
                   </td>
                   <td>{s.categoryName(a.categoryId)}</td>
                   <td>{relativeTime(a.createdAt)}</td>
@@ -94,7 +96,7 @@ export default function MyStories() {
           filedBy={me}
           onClose={() => setCompose(false)}
           onSave={(fields) => {
-            dispatch({ type: 'article/create', payload: { fields } })
+            dispatch({ type: 'article/create', payload: { fields: { id: newDocId('articles'), ...fields } } })
             setCompose(false)
             notify(
               fields.status === NEWS_STATUS.SUBMITTED
@@ -108,7 +110,7 @@ export default function MyStories() {
       {view ? (
         <Modal
           wide
-          title={view.headline}
+          title={L(view.headline)}
           sub={s.categoryName(view.categoryId) + ' · ' + view.status}
           onClose={() => setView(null)}
           footer={<button onClick={() => setView(null)}>Close</button>}
@@ -116,24 +118,24 @@ export default function MyStories() {
           {view.rejectionReason ? (
             <div className="kv">
               <span className="k">Why it was rejected</span>
-              <span className="v">{view.rejectionReason}</span>
+              <span className="v">{L(view.rejectionReason)}</span>
             </div>
           ) : null}
           {view.editorNote ? (
             <div className="kv">
               <span className="k">Note from your editor</span>
-              <span className="v">{view.editorNote}</span>
+              <span className="v">{L(view.editorNote)}</span>
             </div>
           ) : null}
-          <div className="kv"><span className="k">Description</span><span className="v">{view.description || '—'}</span></div>
-          <div className="kv"><span className="k">Tags</span><span className="v">{(view.tags || []).join(', ') || '—'}</span></div>
+          <div className="kv"><span className="k">Description</span><span className="v">{L(view.shortDescription) || '—'}</span></div>
+          <div className="kv"><span className="k">Tags</span><span className="v">{ltList(view.tags || []).join(', ') || '—'}</span></div>
           {view.status === NEWS_STATUS.PUBLISHED ? (
             <div className="kv">
               <span className="k">Views</span>
               <span className="v">{(view.views || 0).toLocaleString('en-IN')}</span>
             </div>
           ) : null}
-          <p className="article-body" style={{ marginTop: 14 }}>{view.body}</p>
+          <p className="article-body" style={{ marginTop: 14 }}>{L(view.content)}</p>
         </Modal>
       ) : null}
     </>

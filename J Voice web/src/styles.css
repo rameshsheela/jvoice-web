@@ -540,3 +540,79 @@ button.block { width: 100%; }
 .demo-divider::after {
   content: ''; flex: 1; height: 1px; background: var(--border);
 }
+
+/* ---- bilingual form fields: one writing language, auto-translate to the other */
+.lang-toggle {
+  display: flex; align-items: center; gap: 8px; margin: 2px 0 12px;
+}
+.lang-toggle-label { font-size: 12px; font-weight: 600; color: var(--muted); margin-right: 4px; }
+.lang-btn {
+  padding: 5px 14px; border-radius: 999px; border: 1px solid var(--border);
+  background: var(--panel); font-size: 13px; cursor: pointer;
+}
+.lang-btn.on { background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 600; }
+.lang-toggle-note { font-size: 12px; color: var(--muted); margin-left: auto; }
+.lt-tag {
+  display: inline-block; min-width: 24px; text-align: center; vertical-align: middle;
+  font-size: 10px; font-weight: 700; color: var(--muted); margin-left: 6px;
+  border: 1px solid var(--border); border-radius: 6px; padding: 1px 4px;
+}
+.lt-other {
+  display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 13px;
+}
+.lt-other .lt-tag { margin-left: 0; }
+.lt-other-text { flex: 1; color: var(--text); white-space: pre-wrap; }
+.lt-other-text.empty { color: var(--faint); font-style: italic; }
+
+/* ---- story form sections */
+.form-section {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px 10px;
+  margin: 0 0 14px;
+  background: var(--bg);
+}
+.form-section-head {
+  display: flex; align-items: flex-start; gap: 10px; margin-bottom: 12px;
+}
+.form-section-head div { display: flex; flex-direction: column; gap: 1px; }
+.form-section-head strong { font-size: 14px; }
+.form-section-head span:not(.form-step) { font-size: 12px; color: var(--muted); }
+.form-step {
+  flex: none; width: 22px; height: 22px; border-radius: 50%;
+  background: var(--brand); color: #fff; font-size: 12px; font-weight: 700;
+  display: inline-flex; align-items: center; justify-content: center; margin-top: 1px;
+}
+
+/* ---- media fields */
+.media-fields { display: flex; flex-direction: column; gap: 14px; }
+.media-block {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px;
+}
+.media-head { display: flex; flex-direction: column; gap: 2px; margin-bottom: 10px; }
+.media-hint { font-size: 12px; color: var(--muted); }
+.media-row { display: flex; gap: 14px; align-items: flex-start; }
+.media-preview {
+  flex: none; width: 160px; height: 100px; border-radius: 8px; overflow: hidden;
+  background: var(--bg); border: 1px dashed var(--border);
+  display: flex; align-items: center; justify-content: center;
+}
+.media-preview img { width: 100%; height: 100%; object-fit: cover; }
+.media-empty { font-size: 12px; color: var(--faint); }
+.media-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; flex: 1; }
+.media-actions-row { margin-top: 4px; }
+.media-link { flex: 1; min-width: 200px; }
+.media-progress {
+  width: 100%; height: 6px; border-radius: 3px; background: var(--border); overflow: hidden;
+}
+.media-progress div { height: 100%; background: var(--brand); transition: width 0.2s; }
+.media-list { list-style: none; margin: 0 0 10px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.media-list li {
+  display: flex; align-items: center; gap: 10px; padding: 6px 10px;
+  background: var(--bg); border-radius: 8px; font-size: 13px;
+}
+.media-kind {
+  flex: none; font-size: 11px; font-weight: 700; color: var(--brand);
+  border: 1px solid var(--brand-soft); background: var(--brand-soft); border-radius: 6px; padding: 1px 6px;
+}
+.media-url { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }

@@ -1,0 +1,29 @@
+rules_version = '2';
+
+// Story media. Everything here is public to read - it is what the app and the
+// site show - and written only by the desk, sized and typed so the console's
+// upload buttons cannot be used to park arbitrary files.
+service firebase.storage {
+  match /b/{bucket}/o {
+    function role() {
+      return request.auth != null && request.auth.token.role is string ? request.auth.token.role : '';
+    }
+    function isNewsDesk() {
+      return role() in ['reporter', 'editor', 'news_admin', 'super_admin'];
+    }
+
+    match /news-photos/{file} {
+      allow read: if true;
+      allow write: if isNewsDesk()
+                   && request.resource.contentType.matches('image/.*')
+                   && request.resource.size < 15 * 1024 * 1024;
+    }
+
+    match /news-videos/{file} {
+      allow read: if true;
+      allow write: if isNewsDesk()
+                   && request.resource.contentType.matches('video/.*')
+                   && request.resource.size < 300 * 1024 * 1024;
+    }
+  }
+}

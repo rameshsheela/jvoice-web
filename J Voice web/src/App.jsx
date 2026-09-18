@@ -13,14 +13,20 @@ import FeatureFlags from './pages/FeatureFlags.jsx'
 import TopicWorkspace from './pages/TopicWorkspace.jsx'
 import MyStories from './pages/MyStories.jsx'
 import ExamTypeSyllabus from './pages/ExamTypeSyllabus.jsx'
-import { ReaderArticle, ReaderHome, ReaderShell } from './reader/Reader.jsx'
+import { ReaderArticle, ReaderShell } from './reader/Reader.jsx'
+import Landing from './reader/Landing.jsx'
+import PrivacyPolicy from './reader/PrivacyPolicy.jsx'
+import Contact from './reader/Contact.jsx'
 
 /**
  * Two applications behind one router.
  *
- *   `/`, `/read/:id`   the public reader — no account, reads published content
- *                      straight from Firestore, and carries the staff sign-in at
- *                      the foot of the landing page
+ *   `/`                a static landing page: what J Voice is, the app, and a
+ *                      single Login button for staff
+ *   `/read/:id`        a shared story, public - the one dynamic reader page
+ *   `/privacy-policy`  the privacy policy, in the reader shell; the Play Store
+ *                      listing links here
+ *   `/contact`         address, phone and a message form that lands in Firestore
  *   `/login`           the console sign-in on its own
  *   everything else    the console, staff only
  *
@@ -64,8 +70,10 @@ export default function App() {
     <Routes>
       {/* ---------------------------------------------------- reader (public) */}
       <Route element={<ReaderShell />}>
-        <Route path="/" element={<ReaderHome />} />
+        <Route path="/" element={<Landing />} />
         <Route path="/read/:id" element={<ReaderArticle />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+        <Route path="/contact" element={<Contact />} />
       </Route>
 
       {/* Signing in again while signed in is a dead end; go to the console. */}

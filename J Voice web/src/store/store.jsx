@@ -1,5 +1,5 @@
 import { isFirebaseReady } from '../firebase.js'
-import { L } from '../i18n/localized.js'
+import { L, lt } from '../i18n/localized.js'
 import { useRef } from 'react'
 import { COLLECTIONS, recordBaseline, subscribeAll, syncCollection } from './firestoreData.js'
 import { observeSession, signInStaff, signOutStaff, watchForceLogout } from './staffAuth.js'
@@ -126,7 +126,7 @@ function reducer(state, action) {
       return {
         ...state,
         articles: replace(state.articles, payload.id, payload.fields),
-        activity: logEntry(state, 'Saved editor changes: ' + payload.fields.headline)
+        activity: logEntry(state, 'Saved editor changes: ' + (payload.headline || L(payload.fields.headline)))
       }
 
     case 'article/approve':
@@ -134,8 +134,8 @@ function reducer(state, action) {
         ...state,
         articles: replace(state.articles, payload.id, () =>
           payload.publish
-            ? { status: NEWS_STATUS.PUBLISHED, publishedAt: Date.now(), rejectionReason: '', editorNote: '' }
-            : { status: NEWS_STATUS.APPROVED, rejectionReason: '', editorNote: '' }
+            ? { status: NEWS_STATUS.PUBLISHED, publishedAt: Date.now(), updatedAt: Date.now(), rejectionReason: null, editorNote: null }
+            : { status: NEWS_STATUS.APPROVED, updatedAt: Date.now(), rejectionReason: null, editorNote: null }
         ),
         activity: logEntry(
           state,
@@ -148,7 +148,8 @@ function reducer(state, action) {
         ...state,
         articles: replace(state.articles, payload.id, {
           status: NEWS_STATUS.REJECTED,
-          rejectionReason: payload.reason
+          updatedAt: Date.now(),
+          rejectionReason: lt(payload.reason, '')
         }),
         activity: logEntry(state, 'Rejected: ' + payload.headline)
       }
@@ -158,7 +159,8 @@ function reducer(state, action) {
         ...state,
         articles: replace(state.articles, payload.id, {
           status: NEWS_STATUS.SENT_BACK,
-          editorNote: payload.note
+          updatedAt: Date.now(),
+          editorNote: lt(payload.note, '')
         }),
         activity: logEntry(state, 'Sent back to reporter: ' + payload.headline)
       }
@@ -166,7 +168,7 @@ function reducer(state, action) {
     case 'article/publish':
       return {
         ...state,
-        articles: replace(state.articles, payload.id, { status: NEWS_STATUS.PUBLISHED, publishedAt: Date.now() }),
+        articles: replace(state.articles, payload.id, { status: NEWS_STATUS.PUBLISHED, publishedAt: Date.now(), updatedAt: Date.now() }),
         activity: logEntry(state, 'Published: ' + payload.headline)
       }
 
@@ -194,7 +196,7 @@ function reducer(state, action) {
     case 'article/clearReports':
       return {
         ...state,
-        articles: replace(state.articles, payload.id, { reports: 0 }),
+        articles: replace(state.articles, payload.id, { reportCount: 0 }),
         activity: logEntry(state, 'Cleared reader reports: ' + payload.headline)
       }
 
@@ -206,18 +208,29 @@ function reducer(state, action) {
       }
 
     case 'article/create': {
+      const now = Date.now()
       const article = {
         id: nextId('n_'),
         tags: [],
+        photoUrls: [],
+        videoUrls: [],
+        detailEnabled: true,
+        notifyReaders: true,
         isBreaking: false,
         isFeatured: false,
+        isTrending: false,
         views: 0,
-        reports: 0,
-        rejectionReason: '',
-        editorNote: '',
+        reportCount: 0,
+        likes: 0,
+        dislikes: 0,
+        comments: 0,
+        rejectionReason: null,
+        editorNote: null,
         imageUrl: '',
-        createdAt: Date.now(),
-        publishedAt: payload.fields.status === NEWS_STATUS.PUBLISHED ? Date.now() : undefined,
+        reporterAvatarUrl: '',
+        createdAt: now,
+        updatedAt: now,
+        publishedAt: payload.fields.status === NEWS_STATUS.PUBLISHED ? now : null,
         ...payload.fields
       }
       return {
@@ -225,7 +238,7 @@ function reducer(state, action) {
         articles: [article, ...state.articles],
         activity: logEntry(
           state,
-          'Article created (' + article.status.toLowerCase() + '): ' + article.headline
+          'Article created (' + article.status.toLowerCase() + '): ' + L(article.headline)
         )
       }
     }

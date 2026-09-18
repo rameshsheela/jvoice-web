@@ -15,11 +15,22 @@
     "ever runs.",
     "",
     "Run `npm run build` in 'J Voice web' before deploying - a stale dist ships",
-    "silently."
+    "silently.",
+    "",
+    "functions: the FCM push relay in firebase/functions (see its index.js).",
+    "Needs the Blaze plan; `firebase deploy --only functions` deploys it alone."
   ],
+  "functions": {
+    "source": "firebase/functions",
+    "runtime": "nodejs22"
+  },
   "hosting": {
     "public": "J Voice web/dist",
-    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
     "rewrites": [
       {
         "source": "**",
@@ -30,12 +41,22 @@
       {
         "//": "Hashed filenames, so the bundle is immutable and cacheable for a year.",
         "source": "/assets/**",
-        "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=31536000, immutable"
+          }
+        ]
       },
       {
         "//": "index.html must never be cached, or a deploy is invisible to returning visitors.",
         "source": "/index.html",
-        "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          }
+        ]
       }
     ]
   },
@@ -44,5 +65,8 @@
   },
   "firestore": {
     "rules": "firebase/firestore.rules"
+  },
+  "storage": {
+    "rules": "firebase/storage.rules"
   }
 }

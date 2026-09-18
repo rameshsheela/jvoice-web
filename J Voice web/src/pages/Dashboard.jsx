@@ -1,3 +1,4 @@
+import { L } from '../i18n/localized.js'
 import { useNavigate } from 'react-router-dom'
 import { useAuth, useSelectors, useStore } from '../store/store.jsx'
 import { DemoNote, Empty, Pill, SectionHead, Stat, StatusPill, relativeTime } from '../components/ui.jsx'
@@ -114,7 +115,7 @@ function AdminDashboard() {
         />
         <Stat
           label="Reader reports"
-          value={s.reported.reduce((n, a) => n + a.reports, 0)}
+          value={s.reported.reduce((n, a) => n + (a.reportCount || 0), 0)}
           caption={s.reported.length + ' articles flagged'}
           accent="var(--danger)"
           onClick={isAdmin ? () => nav('/news/articles') : undefined}
@@ -283,7 +284,7 @@ function AdminDashboard() {
                   {s.reviewQueue.slice(0, 6).map((a) => (
                     <tr key={a.id} style={{ cursor: 'pointer' }} onClick={() => nav('/news/review')}>
                       <td>
-                        <div className="cell-title">{a.headline}</div>
+                        <div className="cell-title">{L(a.headline)}</div>
                         <div className="cell-sub">
                           {s.categoryName(a.categoryId)} · {s.userName(a.reporterId)} ·{' '}
                           {relativeTime(a.createdAt)}

@@ -45,6 +45,26 @@
       "$flag": { ".validate": "newData.isBoolean()" }
     },
 
+    "readers": {
+      // Anonymous readers' display name and location, keyed on the device's
+      // ANDROID_ID (the same scheme as failedLoginAttempts). The desk may list
+      // them; a device may read and write its own node without signing in,
+      // which is what lets a reinstall get its name back. Nothing sensitive:
+      // a first name and a city.
+      ".read": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'super_admin' || root.child('users').child(auth.uid).child('role').val() === 'news_admin')",
+
+      "$deviceId": {
+        ".read": true,
+        ".write": "newData.exists()",
+        ".validate": "$deviceId.matches(/^[a-zA-Z0-9_-]{1,64}$/) && newData.hasChildren(['name', 'location'])",
+        "name": { ".validate": "newData.isString() && newData.val().length <= 40" },
+        "location": { ".validate": "newData.isString() && newData.val().length <= 40" },
+        "language": { ".validate": "newData.isString() && newData.val().matches(/^(en|te)$/)" },
+        "updatedAt": { ".validate": "newData.isNumber()" },
+        "$other": { ".validate": false }
+      }
+    },
+
     "failedLoginAttempts": {
       ".read": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'super_admin' || root.child('users').child(auth.uid).child('role').val() === 'news_admin')",
 
